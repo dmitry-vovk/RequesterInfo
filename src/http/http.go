@@ -8,66 +8,80 @@ import (
 	"net/http"
 )
 
-type AvailableMethods struct {
-	Methods []string `json:"methods"`
-}
-type AllResponse struct {
-	IpAddress string  `json:"ip_address"`
-	UserAgent string  `json:"user_agent"`
-	GeoLoc    geo.Loc `json:"geo_location"`
-}
-type IpResponse struct {
-	IpAddress string `json:"ip_address"`
-}
-type UaResponse struct {
-	Ua string `json:"ua"`
-}
-type GeoResponse struct {
-	Geo geo.Loc `json:"geo_location`
+type Server struct {
+	listen string
+	geo    *geo.Geo
 }
 
-func homeHandler(w http.ResponseWriter, r *http.Request) {
+type (
+	AvailableMethods struct {
+		Methods []string `json:"methods"`
+	}
+	AllResponse struct {
+		IpAddress string  `json:"ip_address"`
+		UserAgent string  `json:"user_agent"`
+		GeoLoc    geo.Loc `json:"geo_location"`
+	}
+	IpResponse struct {
+		IpAddress string `json:"ip_address"`
+	}
+	UaResponse struct {
+		Ua string `json:"ua"`
+	}
+	GeoResponse struct {
+		Geo geo.Loc `json:"geo_location`
+	}
+)
+
+func New(listen string) *Server {
+	return &Server{
+		listen: listen,
+		geo:    geo.New(),
+	}
+}
+
+func (s *Server) homeHandler(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/" {
-		errorNotFoundHandler(w, r)
+		s.errorNotFoundHandler(w, r)
 		return
 	}
 	r.Header.Set("Content-Type", "application/json")
 	methods := AvailableMethods{Methods: []string{"/all", "/ip", "/ua", "/geo"}}
-	io.WriteString(w, encodeOutput(methods))
+	io.WriteString(w, s.encodeOutput(methods))
 }
 
-func allHandler(w http.ResponseWriter, r *http.Request) {
+func (s *Server) allHandler(w http.ResponseWriter, r *http.Request) {
 	ip := ip.GetIp(r)
-	all := AllResponse{ip, r.UserAgent(), geo.GetLoc(ip)}
+	all := AllResponse{ip, r.UserAgent(), s.geo.GetLoc(ip)}
 	r.Header.Set("Content-Type", "application/json")
-	io.WriteString(w, encodeOutput(all))
+	io.WriteString(w, s.encodeOutput(all))
 }
 
-func ipHandler(w http.ResponseWriter, r *http.Request) {
+func (s *Server) ipHandler(w http.ResponseWriter, r *http.Request) {
 	ipResponse := IpResponse{ip.GetIp(r)}
 	r.Header.Set("Content-Type", "application/json")
-	io.WriteString(w, encodeOutput(ipResponse))
+	io.WriteString(w, s.encodeOutput(ipResponse))
 }
 
-func uaHandler(w http.ResponseWriter, r *http.Request) {
+func (s *Server) uaHandler(w http.ResponseWriter, r *http.Request) {
 	uaResponse := UaResponse{r.UserAgent()}
 	r.Header.Set("Content-Type", "application/json")
-	io.WriteString(w, encodeOutput(uaResponse))
+	io.WriteString(w, s.encodeOutput(uaResponse))
 }
 
-func geoHandler(w http.ResponseWriter, r *http.Request) {
+func (s *Server) geoHandler(w http.ResponseWriter, r *http.Request) {
 	ip := ip.GetIp(r)
-	geoResponse := GeoResponse{geo.GetLoc(ip)}
+	geoResponse := GeoResponse{s.geo.GetLoc(ip)}
 	r.Header.Set("Content-Type", "application/json")
-	io.WriteString(w, encodeOutput(geoResponse))
+	io.WriteString(w, s.encodeOutput(geoResponse))
 }
 
-func errorNotFoundHandler(w http.ResponseWriter, r *http.Request) {
+func (s *Server) errorNotFoundHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotFound)
 	io.WriteString(w, "404 Page Not Found")
 }
 
-func encodeOutput(content interface{}) string {
+func (s *Server) encodeOutput(content interface{}) string {
 	output, err := json.Marshal(content)
 	if err == nil {
 		return string(output)
@@ -75,11 +89,11 @@ func encodeOutput(content interface{}) string {
 	return ""
 }
 
-func Start() {
-	http.HandleFunc("/", homeHandler)
-	http.HandleFunc("/all", allHandler)
-	http.HandleFunc("/ip", ipHandler)
-	http.HandleFunc("/ua", uaHandler)
-	http.HandleFunc("/geo", geoHandler)
-	http.ListenAndServe(":8000", nil)
+func (s *Server) Start() {
+	http.HandleFunc("/", s.homeHandler)
+	http.HandleFunc("/all", s.allHandler)
+	http.HandleFunc("/ip", s.ipHandler)
+	http.HandleFunc("/ua", s.uaHandler)
+	http.HandleFunc("/geo", s.geoHandler)
+	http.ListenAndServe(s.listen, nil)
 }

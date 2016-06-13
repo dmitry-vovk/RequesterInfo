@@ -6,6 +6,7 @@ import (
 	"io"
 	"ip"
 	"net/http"
+	"log"
 )
 
 type Server struct {
@@ -34,9 +35,13 @@ type (
 )
 
 func New(listen string) *Server {
+	g, err := geo.New()
+	if err != nil {
+		log.Fatalf("Error creating geoip: %s", err)
+	}
 	return &Server{
 		listen: listen,
-		geo:    geo.New(),
+		geo:    g,
 	}
 }
 

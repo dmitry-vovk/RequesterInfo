@@ -11,7 +11,7 @@ type Loc struct {
 	Iso3Code    string  `json:"iso3_code"`
 	CountryName string  `json:"country_name"`
 	Region      string  `json:"region"`
-	City        string  `"json:"city"`
+	City        string  `json:"city"`
 	Latitude    float32 `json:"latitude"`
 	Longitude   float32 `json:"longitude"`
 }
